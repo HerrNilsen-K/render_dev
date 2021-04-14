@@ -1,0 +1,3 @@
+[submodule "OpenGL_renderer"]
+	path = OpenGL_renderer
+	url = https://github.com/HerrNilsen-K/OpenGL_renderer.git
