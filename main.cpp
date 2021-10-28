@@ -56,11 +56,44 @@ void APIENTRY openglCallbackFunction(GLenum source,
     cout << "---------------------opengl-callback-end--------------" << endl;
 }
 
-float deltaTime = 0.0f;    // Time between current frame and last frame
-float lastFrame = 0.0f; // Time of last frame
+static constexpr float BOUNDRY_R = 9.5;
+static constexpr float BOUNDRY_L = .5;
+static constexpr float SPEED_X = 4;
+static constexpr float SPEED_Y = 3;
+
+void processBoundryCollision(glm::vec2 &dir, glm::vec2 &pos) {
+    if (pos[0] >= BOUNDRY_R && dir[0] > 0 ||
+        pos[0] <= BOUNDRY_L && dir[0] < 0) {
+        dir = glm::vec2(-dir[0], dir[1]);
+    }
+
+    if (pos[1] >= 9.5 && dir[1] > 0 ||
+        pos[1] <= .5 && dir[1] < 0) {
+        dir = glm::vec2(dir[0], -dir[1]);
+    }
+}
+
+void processBallCollision(glm::vec2 pos1, glm::vec2 pos2, glm::vec2 &dir1, glm::vec2 &dir2) {
+    if (glm::distance(pos1, pos2) < 1) {
+        //TODO Calculate new angel
+        //dir1 = -dir1;
+        //dir2 = -dir2;
+
+        //Create cross
+        glm::vec2 crossStart = pos1;
+        glm::vec2 crossEnd = pos2;
+        glm::vec2 crossDirection = crossStart - crossEnd;
+
+        //Set first direction
+        dir1 = glm::rotate(glm::mat4(1.f), glm::radians(90.f), glm::vec3(0,0,1)) * glm::vec4(crossDirection, 0, 0);
+        dir2 = crossDirection;
+        std::cout << "COLLISION\n";
+    }
+}
 
 int main() {
     window::init();
+    //TODO Changing window size destroys EVERYTHING
     window win(600, 600);
     win.createWindow();
     glfwSetFramebufferSizeCallback(win.getHNDL(), [](GLFWwindow *win, int w, int h) {
@@ -72,42 +105,65 @@ int main() {
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(openglCallbackFunction, nullptr);
 
-    sprite player(win);
-    player.stepX(3);
-    player.stepX(-1);
-    player.stepY(2);
+    /*J
+    sprite ball(win);
+    ball.stepX(3);
+    ball.stepY(2);
+    ball.setColor(color{100, 0, 100, 0});
+    ball.update();
+     */
 
-    sprite field[10][10];
+    constexpr int SPRITE_COUNT = 2;
 
-    for (int i = 0; i < 10; ++i)
-        for (int j = 0; j < 10; ++j) {
-            field[i][j] = sprite(win);
-            field[i][j].stepX(i);
-            field[i][j].stepY(j);
-            field[i][j].setColor(color{static_cast<uint8_t>(i * 20), 0, static_cast<uint8_t>(j * 20), 0});
-        }
+    sprite ball[SPRITE_COUNT];
+    for (int i = 0; i < SPRITE_COUNT; ++i) {
+        ball[i] = sprite(win);
+        ball[i].stepX(static_cast<float>(i*2));
+        ball[i].setColor(color{static_cast<uint8_t>(i * 20), 120, 200});
+        ball[i].update();
+    }
 
-
+    float currentFrame;
+    float deltaTime = 0.0f;    // Time between current frame and last frame
+    float lastFrame = 0.0f; // Time of last frame
+    glm::vec4 move1 = {0, 0, 0, 0};
+    glm::vec4 move2 = {-SPEED_X, -SPEED_Y, 0, 0};
+    std::array<glm::vec2, SPRITE_COUNT> direction{};
+    for (auto &i : direction) {
+        static float num = 0;
+        i = glm::rotate(glm::mat4(1.f), glm::radians(num), glm::vec3(0, 0, 1)) * (move1 -
+                                                                                  move2);
+        num += 10;
+    }
     while (!win.run()) {
-        float currentFrame = glfwGetTime();
+        currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
+
+        if (currentFrame - lastFrame >= 1.f / 60) {
         lastFrame = currentFrame;
-
         glfwSwapBuffers(win.getHNDL());
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT);
+        //std::cout << 1 / deltaTime << std::endl;
 
-        //player.update();
-        //player.render();
+        //std::cout << direction[0] << " / " << direction[1] << std::endl;
+        for (int i = 0; i < SPRITE_COUNT; ++i) {
+            glm::vec2 pos = ball[i].getPos();
 
-        for (int i = 0; i < 10; ++i)
-            for (int j = 0; j < 10; ++j) {
-                field[i][j].update();
-                field[i][j].render();
-            }
+            processBoundryCollision(direction[i], pos);
+            for (int j = 0; j < SPRITE_COUNT; ++j)
+                if (i == j)
+                    continue;
+                else
+                    processBallCollision(pos, ball[j].getPos(), direction[i], direction[j]);
 
-        std::cout << 1 / deltaTime << std::endl;
+            ball[i].stepX(direction[i][0] * deltaTime);
+            ball[i].stepY(direction[i][1] * deltaTime);
 
-        glfwPollEvents();
+            ball[i].update();
+            ball[i].render();
+            glfwPollEvents();
+        }
+        }
     }
 
     return 0;
