@@ -73,21 +73,38 @@ void processBoundryCollision(glm::vec2 &dir, glm::vec2 &pos) {
     }
 }
 
-void processBallCollision(glm::vec2 pos1, glm::vec2 pos2, glm::vec2 &dir1, glm::vec2 &dir2) {
+void processBallCollision(glm::vec2 pos1, glm::vec2 pos2, glm::vec2 &dir1, glm::vec2 &dir2, double deltaTime) {
+    auto dir1temp = dir1;
+    auto dir2temp = dir2;
+    dir1temp[0] *= (float)deltaTime;
+    dir1temp[1] *= (float)deltaTime;
+    dir2temp[0] *= (float)deltaTime;
+    dir2temp[1] *= (float)deltaTime;
+    pos1 += dir1temp;
+    pos2 += dir2temp;
     if (glm::distance(pos1, pos2) < 1) {
         //TODO Calculate new angel
-        //dir1 = -dir1;
-        //dir2 = -dir2;
+        glm::vec2 middleVec = pos2 - pos1;
 
-        //Create cross
-        glm::vec2 crossStart = pos1;
-        glm::vec2 crossEnd = pos2;
-        glm::vec2 crossDirection = crossStart - crossEnd;
+        float tangentAngle = std::atan(middleVec[1] / middleVec[0]);
+        tangentAngle = std::round(glm::degrees(tangentAngle));
+        std::cout << std::round(glm::degrees(tangentAngle)) << std::endl;
 
-        //Set first direction
-        dir1 = glm::rotate(glm::mat4(1.f), glm::radians(90.f), glm::vec3(0,0,1)) * glm::vec4(crossDirection, 0, 0);
-        dir2 = crossDirection;
-        std::cout << "COLLISION\n";
+        double posDir = pos1[0] * pos2[0] + pos1[1] * pos2[1];
+        double multiplier = 1;
+        if(posDir >= 180)
+            multiplier = 2;
+        std::cout << "posDir: " << posDir << std::endl;
+        float rotation = tangentAngle * 2.f * multiplier;
+        dir1 = glm::rotate(glm::mat4(1.f), rotation, glm::vec3(0, 0, 1)) * glm::vec4(dir1, 0, 0);
+        dir2 = glm::rotate(glm::mat4(1.f), rotation, glm::vec3(0, 0, 1)) * glm::vec4(dir2, 0, 0);
+        std::cout << dir1[0] << " " << dir1[1] << std::endl;
+
+
+
+        static int count = 0;
+        ++count;
+        std::cout << "COLLISION NUMMBER: " << count << std::endl;
     }
 }
 
@@ -118,7 +135,7 @@ int main() {
     sprite ball[SPRITE_COUNT];
     for (int i = 0; i < SPRITE_COUNT; ++i) {
         ball[i] = sprite(win);
-        ball[i].stepX(static_cast<float>(i*2));
+        ball[i].stepX(static_cast<float>(i));
         ball[i].setColor(color{static_cast<uint8_t>(i * 20), 120, 200});
         ball[i].update();
     }
@@ -154,7 +171,7 @@ int main() {
                 if (i == j)
                     continue;
                 else
-                    processBallCollision(pos, ball[j].getPos(), direction[i], direction[j]);
+                    processBallCollision(pos, ball[j].getPos(), direction[i], direction[j], deltaTime);
 
             ball[i].stepX(direction[i][0] * deltaTime);
             ball[i].stepY(direction[i][1] * deltaTime);
