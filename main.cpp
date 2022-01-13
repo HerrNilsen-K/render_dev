@@ -113,6 +113,7 @@ int main() {
     //TODO Changing window size destroys EVERYTHING
     window win(600, 600);
     win.createWindow();
+    glfwSetWindowTitle(win.getHNDL(), "Bouncing Balls");
     glfwSetFramebufferSizeCallback(win.getHNDL(), [](GLFWwindow *win, int w, int h) {
         glViewport(0, 0, w, h);
     });
@@ -130,7 +131,7 @@ int main() {
     ball.update();
      */
 
-    constexpr int SPRITE_COUNT = 2;
+    constexpr int SPRITE_COUNT = 10;
 
     sprite ball[SPRITE_COUNT];
     for (int i = 0; i < SPRITE_COUNT; ++i) {
